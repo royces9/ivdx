@@ -6,11 +6,51 @@
 #include <unistd.h>
 
 #include "keybinds.h"
-#include "keybind_const.h"
+#include "keybinds_const.h"
+
+
+
+#define ___KEY_TITLES___ {"[4k]",		\
+			   "[5k]",		\
+			   "[6k]",		\
+			   "[7k]",		\
+			   "[7k+1]",		\
+			   "[8k]"		\
+	}
+
+#define ___FIELDS___ {4,			\
+		      5,			\
+		      6,			\
+		      7,			\
+		      8,			\
+		      8				\
+	}
+
+#define ___KEY_NAMES___ {"key0",		\
+			 "key1",		\
+			 "key2",		\
+			 "key3",		\
+			 "key4",		\
+			 "key5",		\
+			 "key6",		\
+			 "key7",		\
+			 "key8"			\
+	}
+
+
+#define ___BIND_NAMES___ { "select",		\
+			   "back",		\
+			   "pause",		\
+			   "scroll down",	\
+			   "scroll up",		\
+			   "scroll diff down",	\
+			   "scroll diff up"	\
+	}
+
 
 char *get_cfg(void){
 	char *user = getenv("HOME");
-	char *cfg_path = "/.config/ivdx.cfg";
+	char *cfg_path = "/.config/ivdx/ivdx.cfg";
 
 	char *out = malloc( (strlen(user) + strlen(cfg_path) + 1) * sizeof(*out) );
 
@@ -21,11 +61,12 @@ char *get_cfg(void){
 	return out;
 }
 
+
+
 #define BUFF_SIZE 64
 
 int assign_binds(void) {
 	char *cfg_path = 
-
 #ifdef RELEASE
 	get_cfg();
 #else
@@ -45,50 +86,40 @@ int assign_binds(void) {
 
 	char buffer[BUFF_SIZE];
 
-	char *bind_names[] = { "select",
-			       "back",
-			       "pause",
-			       "scroll down",
-			       "scroll up",
-			       "scroll diff down",
-			       "scroll diff up"
+
+	char *window_names[] = {"width",
+				"height",
+				"skin"
 	};
 
-	if(read_section(cfg, "[Settings]", 7, bind_names, kb_menu[0], buffer)) {
+	if(read_section(cfg, "[Window]", 3, window_names, (char *) window_settings, 8, read_word, buffer)) {
+		printf("Error reading [Window] section.\n");
+		fclose(cfg);
+		free(cfg_path);
+		return 1;
+	}
+
+
+	char *bind_names[] =  ___BIND_NAMES___;
+
+	if(read_section(cfg, "[Settings]", 7, bind_names, (char *) kb_menu, 8, read_char, buffer)) {
 		printf("Error reading [Settings] section.\n");
 		return 1;
 	}
 
-	char *key_titles[] = {"[4k]",
-			      "[5k]",
-			      "[6k]",
-			      "[7k]",
-			      "[7k+1]",
-			      "[8k]"
-	};
+	strcpy(buffer + 5, skin_dir);
 
-	unsigned char fields[] = {4,
-				 5,
-				 6,
-				 7,
-				 8,
-				 8
-	};
+	//key consts cause i wanna make this easy to read christ
+	char *key_titles[] = ___KEY_TITLES___;
+	unsigned char fields[] = ___FIELDS___;
+	char *key_names[] = ___KEY_NAMES___;
 
 
-	char *key_names[] = {"key0",
-			   "key1",
-			   "key2",
-			   "key3",
-			   "key4",
-			   "key5",
-			   "key6",
-			   "key7",
-			   "key8"
-	};
 	for(int i = 0; i < 6; ++i) {
-		if(read_section(cfg, key_titles[i], fields[i], key_names, kb_game[i], buffer)) {
+		if(read_section(cfg, key_titles[i], fields[i], key_names, (char *) kb_game[i], 4, read_char, buffer)) {
 			printf("Error reading %s section.\n", key_titles[i]);
+			fclose(cfg);
+			free(cfg_path);
 			return 1;
 		}
 	}
@@ -100,7 +131,9 @@ int assign_binds(void) {
 }
 
 
-int read_section(FILE *file, char const *const title, int fields, char *field_names[], int *kb, char *buffer) {
+int read_section(FILE *file, char const *const title, int fields,
+		 char *field_names[], char *dest, int field_size,
+		 int (*fp) (char *, char *, void *), char *buffer) {
 	memset(buffer, 0, BUFF_SIZE);
 
 	int len = strlen(title);
@@ -113,16 +146,38 @@ int read_section(FILE *file, char const *const title, int fields, char *field_na
 
 		break;
 	}
-	
+
 	for(int i = 0; i < fields; ++i) {
 		fgets(buffer, BUFF_SIZE, file);
-		int field_len = strlen(field_names[i]);
-
-		if(strncmp(field_names[i], buffer, field_len))
+		if(fp(field_names[i], buffer, dest + i * field_size))
 			return 1;
-
-		kb[i] = SDL_GetScancodeFromKey(buffer[field_len + 1]);
 	}
+
+
 
 	return 0;
 }
+
+
+int read_char(char *field_name, char *buff, void *dest) {
+	int field_len = strlen(field_name);
+
+	if(strncmp(field_name, buff, field_len - 1))
+		return 1;
+
+	*(int *) dest = SDL_GetScancodeFromKey(buff[field_len + 1]);
+
+	return 0;
+}
+
+int read_word(char *field_name, char *buff, void *dest) {
+	int field_len = strlen(field_name);
+
+	if(strncmp(field_name, buff, field_len))
+		return 1;
+
+	strcpy(*(char **) dest, buff + field_len + 1);
+
+	return 0;
+}
+

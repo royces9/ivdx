@@ -7,14 +7,24 @@
 #include "ui.h"
 #include "error.h"
 #include "keybinds.h"
-
+#include "skin.h"
+extern char *window_settings[];
 int main(int argc, char **argv) {
+
 	startup();
 
 	if(assign_binds()) {
 		printf("Failed to assign binds.\n");
 		exit(1);
 	}
+
+	if(load_skin()) {
+		printf("Failed to load skin.\n");
+		exit(1);
+	}
+
+
+
 
 	struct window w;
 	struct render r;
@@ -34,9 +44,7 @@ int main(int argc, char **argv) {
 		exit(1);
 	}
 
-
 	mainloop(win, ren, argc, argv);
-
 
 	cleanup(win, ren);
 	SDL_Quit();

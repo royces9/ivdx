@@ -4,6 +4,8 @@
 #include "init.h"
 #include "error.h"
 
+extern char *window_settings[];
+
 void startup(void) {
         if( SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) ) {
 		SDL_err();
@@ -22,9 +24,9 @@ void startup(void) {
 }
 
 void init_window(struct window *window) {
-	window->width = 1920;
-	window->height = 1080;
-	window->flags = SDL_WINDOW_SHOWN;	
+	window->width = atoi(window_settings[0]);
+	window->height = atoi(window_settings[1]);
+	window->flags = SDL_WINDOW_SHOWN;
 }
 
 void init_render(struct render *render) {

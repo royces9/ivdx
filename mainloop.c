@@ -7,6 +7,9 @@
 #include "ui.h"
 #include "error.h"
 
+extern char *kb_menu[];
+extern char *skin_dir;
+
 void mainloop(SDL_Window *win, SDL_Renderer *ren, int argc, char **argv) {
 
 	int quit = 0;
@@ -15,20 +18,25 @@ void mainloop(SDL_Window *win, SDL_Renderer *ren, int argc, char **argv) {
 	while(!quit) {
 		while(SDL_PollEvent(&event)) {
 			if(event.type == SDL_KEYDOWN) {
-				switch(event.key.keysym.sym) {
-				case SDLK_q:
+				switch(event.key.keysym.scancode) {
+				case SDL_SCANCODE_Q:
 					quit = 1;
 					break;
-				case SDLK_4:
-				case SDLK_5:
-				case SDLK_6:
-				case SDLK_7:
-				case SDLK_8:
-				case SDLK_9:
+				case SDL_SCANCODE_4:
+				case SDL_SCANCODE_5:
+				case SDL_SCANCODE_6:
+				case SDL_SCANCODE_7:
+				case SDL_SCANCODE_8:
+				case SDL_SCANCODE_9:
 					gameloop(win, ren, event.key.keysym.sym - 48, argv);
 					break;
 				}
 			}
 		}
 	}
+}
+
+
+int render_menu(SDL_Window *win, SDL_Renderer *ren) {
+
 }

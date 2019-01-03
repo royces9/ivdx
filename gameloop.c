@@ -6,16 +6,17 @@
 #include "gameloop.h"
 #include "error.h"
 
-
 extern int *kb_game[];
 
-#define MAX_SIZE 64
+#define MAX_SIZE 128
 
 struct note {
 	int occ;
 	SDL_Rect rect;
 };
 
+
+void play_chart(SDL_Window *win, SDL_Renderer *ren);
 
 void gameloop(SDL_Window *win, SDL_Renderer *ren, int argc, char **argv) {
         int quit = 0;
