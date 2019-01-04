@@ -19,4 +19,4 @@ clean:
 	del $(OBJS) $(EXE)
 
 kill:
-	kill -9 $$(ps aux | grep "./ivdx" | head -n 1 | cut -b10-15)
+	kill -9 $$(ps aux | grep "./$(EXE)" | head -n 1 | cut -b10-15)
