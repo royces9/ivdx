@@ -1,6 +1,7 @@
 #ifndef GAMELOOP
 #define GAMELOOP
 
-void gameloop(SDL_Window *win, SDL_Renderer *ren, int argc, char **argv);
+void play_chart(win_ren *ren);
+void gameloop(win_ren *win, int argc, char **argv);
 
 #endif //GAMELOOP

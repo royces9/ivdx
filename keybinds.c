@@ -47,6 +47,12 @@
 			   "scroll diff up"	\
 	}
 
+#define ___WINDOW_NAMES___ {"width",		\
+			    "height",		\
+			    "framerate",	\
+			    "skin"		\
+	}
+
 
 char *get_cfg(void){
 	char *user = getenv("HOME");
@@ -71,28 +77,20 @@ int assign_binds(void) {
 	get_cfg();
 #else
 	malloc(9 * sizeof(*cfg_path));
-	cfg_path[0] = 'i'; cfg_path[1] = 'v';
-	cfg_path[2] = 'd'; cfg_path[3] = 'x';
-	cfg_path[4] = '.'; cfg_path[5] = 'c';
-	cfg_path[6] = 'f'; cfg_path[7] = 'g';
-	cfg_path[8] = 0;
+	strcpy(cfg_path, "ivdx.cfg");
 #endif
 
 	FILE *cfg = fopen(cfg_path, "r");
 	if(!cfg) {
-		printf("Could not open config.\n");
+		printf("Could not open config: %s.\n", cfg_path);
 		return 1;
 	}
 
 	char buffer[BUFF_SIZE];
 
+	char *window_names[] = ___WINDOW_NAMES___;
 
-	char *window_names[] = {"width",
-				"height",
-				"skin"
-	};
-
-	if(read_section(cfg, "[Window]", 3, window_names, (char *) window_settings, 8, read_word, buffer)) {
+	if(read_section(cfg, "[Window]", 4, window_names, (char *) window_settings, 8, read_word, buffer)) {
 		printf("Error reading [Window] section.\n");
 		fclose(cfg);
 		free(cfg_path);
@@ -113,7 +111,6 @@ int assign_binds(void) {
 	char *key_titles[] = ___KEY_TITLES___;
 	unsigned char fields[] = ___FIELDS___;
 	char *key_names[] = ___KEY_NAMES___;
-
 
 	for(int i = 0; i < 6; ++i) {
 		if(read_section(cfg, key_titles[i], fields[i], key_names, (char *) kb_game[i], 4, read_char, buffer)) {
