@@ -12,7 +12,6 @@
 
 
 int main(int argc, char **argv) {
-
 	startup();
 
 	if(assign_binds()) {
@@ -31,6 +30,5 @@ int main(int argc, char **argv) {
 	mainloop(&w, argc, argv);
 
 	cleanup(&w);
-	SDL_Quit();
 	return 0;
 }

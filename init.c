@@ -29,11 +29,13 @@ void start_window(win_ren *data) {
 
 	int width = atoi(window_settings[0]);
 	int height = atoi(window_settings[1]);
-	int framerate = atoi(window_settings[2]);
 	int w_flags = SDL_WINDOW_SHOWN;
 
-	SDL_Window *win = SDL_CreateWindow(title, 0, 0, width, height, w_flags);
-	if(!win) {
+	//framerate
+	data->fr = atoi(window_settings[2]);
+
+	data->w = SDL_CreateWindow(title, 0, 0, width, height, w_flags);
+	if(!data->w) {
 		SDL_err();
 		exit(1);
 	}
@@ -41,22 +43,19 @@ void start_window(win_ren *data) {
 
 	int r_flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
 
-	SDL_Renderer *ren = SDL_CreateRenderer(win, -1, r_flags);
-	if(!ren) {
+	data->r = SDL_CreateRenderer(data->w, -1, r_flags);
+	if(!data->r) {
 		SDL_err();
 		exit(1);
 	}
-
-	data->w = win;
-	data->r = ren;
-	data->fr = framerate;		    
 }
 
 
 void cleanup(win_ren *w) {
-	if(w->w)
-		SDL_DestroyWindow(w->w);
+	SDL_DestroyRenderer(w->r);
+	SDL_DestroyWindow(w->w);
 	
-	if(w->r)
-		SDL_DestroyRenderer(w->r);
+
+	Mix_CloseAudio();
+	SDL_Quit();
 }
