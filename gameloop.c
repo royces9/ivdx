@@ -9,12 +9,17 @@
 
 extern int *kb_game[];
 
-#define MAX_SIZE 64
+//#define MAX_SIZE 64
+#define MAX_SIZE 256
 
 int hit_line = 1080;
 
 
+
 void play_chart(win_ren *ren) {
+}
+
+struct note *parse_map(int keys, FILE *fp, int early) {
 }
 
 void gameloop(win_ren *win, int argc, char **argv) {
@@ -22,23 +27,15 @@ void gameloop(win_ren *win, int argc, char **argv) {
 	int keys = argc;
 
 	//scroll speed
-	//units of (pixel / s) * frame
-	int speed = 400;
-
-	//arbitrary scale amount, makes
-	//speed a reasonable magnitude
-	//ms
-	float scale = 20;
+	//units of (pixel / s)
+	int speed = 1000;
 
 	//time per frame
 	//ms/frame
 	int ms_per_frame = 1000 / win->fr;
 
 	//the number of pixels to move down per frame (each frame in time)
-	//((pixel / ms) * frame) * (ms / frame) / (ms) = pixel / ms
-	//int delta_pos = speed * (float) ms_per_frame / scale;
-
-	//(pixel / s) * frame / (frame / s)
+	//(pixel / s) / (frame / s)
 	int delta_pos = speed / win->fr;
 
 	//ms to offset when the note should be
@@ -48,13 +45,14 @@ void gameloop(win_ren *win, int argc, char **argv) {
 
 	//hit_line is a temporary global for now
 	//the y coordinate of bottom of lane
-	int draw_early = hit_line * (scale / speed);
+	int draw_early = (hit_line * 1000) / speed;
 
 	SDL_Event event;
 	SDL_Texture **tex = malloc(keys * sizeof(*tex));
-	struct note **rect = malloc(keys * sizeof(*rect));
+	SDL_Rect **rect = malloc(keys * sizeof(*rect));
 
-	int *note_ind = calloc(keys, sizeof(*note_ind));
+	unsigned char *head = calloc(keys, sizeof(*head));
+	unsigned char *tail = calloc(keys, sizeof(*tail));
 
 	int *const scancode = kb_game[keys - 4];
 
@@ -74,13 +72,15 @@ void gameloop(win_ren *win, int argc, char **argv) {
 				return;
 			}
 			
-			rect[i][j].rect.w = width;
-			rect[i][j].rect.h = height;
-			rect[i][j].rect.x = (i + 1) * width;
-			rect[i][j].rect.y = 0;
-			rect[i][j].occ = 0;
+			rect[i][j].w = width;
+			rect[i][j].h = height;
+			rect[i][j].x = (i + 1) * width;
+			rect[i][j].y = 0;
 		}
 	}
+
+	FILE *fp;
+	struct note *notes = parse_map(keys, fp, draw_early);
 
 	if(SDL_RenderClear(win->r)) {
 		SDL_err();
@@ -89,112 +89,66 @@ void gameloop(win_ren *win, int argc, char **argv) {
 
 
 	long lag = 0;
-	int update = 500/ win->fr;
 
+	int object_ind = 0;
 	unsigned int prev = SDL_GetTicks();
-
+	unsigned int start = prev;
 	while(!quit) {
-		unsigned int start = SDL_GetTicks();
-		unsigned int elap = start - prev;
-		prev = start;
-		lag += (long) elap;
-
 		while(SDL_PollEvent(&event)) {
 			if(event.type == SDL_KEYDOWN) {
 				if(event.key.keysym.scancode == SDL_SCANCODE_Q)
 					goto return_;
 				
-				int ind = 0;
 				for(int i = 0; i < keys; ++i) {
 					if(event.key.keysym.scancode == scancode[i]) {
-						ind = i;
+						head[i]++;
 						break;
 					}
 				}
-				rect[ind][note_ind[ind]++].occ = 1;
-				if(note_ind[ind] >= MAX_SIZE)
-					note_ind[ind] = 0;
 			}
 		}
+		
+		for(unsigned int curr; (curr = SDL_GetTicks()) > prev; prev += ms_per_frame) {
+			unsigned int offset = curr - start;
+			int diff = (int) offset - notes->times[object_ind];
 
-		while(lag >= update) {
-			if(update_note(win, keys, MAX_SIZE, tex, rect, delta_pos))
-				goto return_;
-			lag -= update;
-		}
+			if(diff < 0)
+				diff *= -1;
 
-		for(int i = 0; i < keys; ++i) {
-			for(int j = 0; j < MAX_SIZE; ++j) {
-				if(rect[i][j].occ) {
-					//rect[i][j].rect.y += ((float) lag / update) * (delta_pos);
-					if(SDL_RenderCopy(win->r, *(tex + i), NULL, &rect[i][j].rect)) {
-						SDL_err();
-						goto return_;
+			if(diff < ms_per_frame) {
+				object_ind++;
+				for(int i = 0; i < keys; ++i) {
+					if(notes->objects[i][object_ind] == 1) {
+						head[i]++;
 					}
 				}
 			}
+
+			if(update_note(win, keys, MAX_SIZE, tex, rect, delta_pos, head, tail))
+				goto return_;
+
 		}
+
+		for(int i = 0; i < keys; ++i) {
+			for(unsigned char j = tail[i]; j != head[i]; ++j) {
+				if(SDL_RenderCopy(win->r, *(tex + i), NULL, &rect[i][j])) {
+					SDL_err();
+					goto return_;
+				}
+			}
+		}
+
 		SDL_RenderPresent(win->r);
+
 		if(SDL_RenderClear(win->r)) {
 			SDL_err();
 			goto return_;
-		} 
-		//unsigned int end = SDL_GetTicks() - start;
-
-		//printf("%d\n", end);
-
- 		/* if(end > ms_per_frame) { */
-		/* 	SDL_RenderPresent(win->r); */
-		/* } */
-
-		/* if(ms_per_frame > end) */
-		/* 	SDL_Delay(ms_per_frame - end); */
-		
-	}
-	
-	/*
-	unsigned char const *state = SDL_GetKeyboardState(NULL);
-	while(!quit) {
-		while(SDL_PollEvent(&event));
-
-		if(state[SDL_SCANCODE_Q])
-			return;
-
-		if(SDL_RenderClear(win->r)) {
-			SDL_err();
-			return;
 		}
-
-		for(int i = 0; i < keys; ++i) {
-			if(state[scancode[i]]) {
-				rect[i][node_ind[i]++].occ = 1;
-
-				if(note_ind[i] >= MAX_SIZE)
-					note_ind[i] = 0;
-			}
-
-			for(int j = 0; j < MAX_SIZE; ++j) {
-				if(rect[i][j].occ) {
-					if(SDL_RenderCopy(win->r, *(tex + i), NULL, &rect[i][j].rect)) {
-						SDL_err();
-						return;
-					}
-					rect[i][j].rect.y += speed;
-					if(rect[i][j].rect.y > 1080) {
-						rect[i][j].rect.y = 0;
-						rect[i][j].occ = 0;
-					}
-				}
-			}
-		}
-		SDL_RenderPresent(win->r);
-
-		SDL_Delay(16);
 	}
-	*/
 
  return_:
-	free(note_ind);
+	free(head);
+	free(tail);
 	for(int i = 0; i < keys; ++i)
 		SDL_DestroyTexture(*(tex + i));
 
@@ -208,20 +162,14 @@ void gameloop(win_ren *win, int argc, char **argv) {
 }
 
 
-int update_note(win_ren *win, int key_count, int note_count, SDL_Texture **tex, struct note **note, int increment) {
+int update_note(win_ren *win, int key_count, int note_count, SDL_Texture **tex, SDL_Rect **note, int increment, unsigned char *head, unsigned char *tail) {
 	for(int i = 0; i < key_count; ++i) {
-		for(int j = 0; j < note_count; ++j) {
-			if(note[i][j].occ) {
-				/* if(SDL_RenderCopy(win->r, *(tex + i), NULL, &note[i][j].rect)) { */
-				/* 	SDL_err(); */
-				/* 	return 1; */
-				/* } */
-					
-				note[i][j].rect.y += increment;
-				if(note[i][j].rect.y > hit_line) {
-					note[i][j].rect.y = 0;
-					note[i][j].occ = 0;
-				}
+		for(unsigned char j = tail[i]; j != head[i]; ++j) {
+			note[i][j].y += increment;
+
+			if(note[i][j].y > hit_line) {
+				tail[i]++;
+				note[i][j].y = 0;
 			}
 		}
 	}
