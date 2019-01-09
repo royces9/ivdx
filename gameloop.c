@@ -99,27 +99,36 @@ void gameloop(win_ren *win, int argc, char **argv) {
 		*(note_rect + i) = malloc(MAX_SIZE * sizeof(**note_rect));
 		*(hold_rect + i) = malloc(MAX_SIZE * sizeof(**hold_rect));
 		for(int j = 0; j < MAX_SIZE; ++j) {
-			int width;
-			int height;
-			if(SDL_QueryTexture(*(note_tex + i), NULL, NULL, &width, &height)) {
+			//change i to grab from skin instead
+			if(load_rect(*(note_tex + i), *(note_rect + i) + j, -1, -1, i, 0)) {
+				SDL_err();
+				return;
+			}
+
+			if(load_rect(*(hold_tex + i), *(hold_rect + i) + j, -1, -1, i, 0)) {
 				SDL_err();
 				return;
 			}
 			
-			note_rect[i][j].w = width;
-			note_rect[i][j].h = height;
-			note_rect[i][j].x = (i + 1) * width;
-			note_rect[i][j].y = 0;
+			/* int width; */
+			/* int height; */
+			/* if(SDL_QueryTexture(*(note_tex + i), NULL, NULL, &width, &height)) { */
+			/* } */
+			
+			/* note_rect[i][j].w = width; */
+			/* note_rect[i][j].h = height; */
+			/* note_rect[i][j].x = (i + 1) * width; */
+			/* note_rect[i][j].y = 0; */
+ 
+			/* if(SDL_QueryTexture(*(hold_tex + i), NULL, NULL, &width, &height)) { */
+			/* 	SDL_err(); */
+			/* 	return; */
+			/* } */
 
-			if(SDL_QueryTexture(*(hold_tex + i), NULL, NULL, &width, &height)) {
-				SDL_err();
-				return;
-			}
-
-			hold_rect[i][j].w = width;
-			hold_rect[i][j].h = delta_pos + 10;
-			hold_rect[i][j].x = (i + 1) * width;
-			hold_rect[i][j].y = 0;
+			/* hold_rect[i][j].w = width; */
+			/* hold_rect[i][j].h = delta_pos + 10; */
+			/* hold_rect[i][j].x = (i + 1) * width; */
+			/* hold_rect[i][j].y = 0; */
 		}
 	}
 
@@ -234,6 +243,19 @@ int update_note(win_ren *win, int key_count, int note_count, SDL_Rect **note, in
 			}
 		}
 	}
+
+	return 0;
+}
+
+
+int load_rect(SDL_Texture *tex, SDL_Rect *rect, int width, int height, int lane_no, int y) {
+	if(SDL_QueryTexture(tex, NULL, NULL, &rect->w, &rect->h)) {
+		SDL_err();
+		return 1;
+	}
+
+	rect->x = (lane_no + 1) * rect->w;
+	rect->y = y;
 
 	return 0;
 }
