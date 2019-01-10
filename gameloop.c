@@ -109,26 +109,6 @@ void gameloop(win_ren *win, int argc, char **argv) {
 				SDL_err();
 				return;
 			}
-			
-			/* int width; */
-			/* int height; */
-			/* if(SDL_QueryTexture(*(note_tex + i), NULL, NULL, &width, &height)) { */
-			/* } */
-			
-			/* note_rect[i][j].w = width; */
-			/* note_rect[i][j].h = height; */
-			/* note_rect[i][j].x = (i + 1) * width; */
-			/* note_rect[i][j].y = 0; */
- 
-			/* if(SDL_QueryTexture(*(hold_tex + i), NULL, NULL, &width, &height)) { */
-			/* 	SDL_err(); */
-			/* 	return; */
-			/* } */
-
-			/* hold_rect[i][j].w = width; */
-			/* hold_rect[i][j].h = delta_pos + 10; */
-			/* hold_rect[i][j].x = (i + 1) * width; */
-			/* hold_rect[i][j].y = 0; */
 		}
 	}
 
@@ -144,6 +124,9 @@ void gameloop(win_ren *win, int argc, char **argv) {
 	long lag = 0;
 	int hold_ind = 0;
 	int object_ind = 0;
+
+	int default_height = note_rect[0][0].h;
+
 	unsigned int prev = SDL_GetTicks();
 	unsigned int start = prev;
 
@@ -172,13 +155,19 @@ void gameloop(win_ren *win, int argc, char **argv) {
 			if(diff < ms_per_frame) {
 				object_ind++;
 				for(int i = 0; i < keys; ++i) {
-					if(notes[object_ind].objects[i])
-						head[i]++;
-
+					if(notes[object_ind].objects[i] == 1) {
+						note_rect[i][head[i]++].h = default_height;
+					} else if(notes[object_ind].objects[i] == 2) {
+						note_rect[i][head[i]++].h =
+							(notes[object_ind].times.end -
+							 notes[object_ind].times.start) /
+							ms_per_frame;
+					}
 					/*
 					if(notes[object_ind].objects[i] == 1) {
 						head[i]++;
 					} else if(notes[object_ind].objects[i] == 2) {
+						
 						hold_rect[i][hold_head[i]++].h = (notes[object_ind].times.end - notes[object_ind].times.start)/ms_per_frame;
 						hold_head[i]++;
 					}
