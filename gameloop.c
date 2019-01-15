@@ -15,7 +15,6 @@ extern int *kb_game[];
 int hit_line = 1080;
 
 
-
 void play_chart(win_ren *ren) {
 }
 
@@ -163,41 +162,41 @@ void gameloop(win_ren *win, int argc, char **argv) {
 
 			if(diff < ms_per_frame) {
 				for(int i = 0; i < keys; ++i) {
-					if(notes[object_ind].objects[i]) {
-						if(notes[object_ind].objects[i] == 1) {
-							note_rect[i][head[i]].h = default_height;
-							note_rect[i][head[i]].y = -default_height;
-						} else if(notes[object_ind].objects[i] == 2) {
-							int time_diff =	notes[object_ind].times.end - notes[object_ind].times.start;
-							int frame_count = time_diff / ms_per_frame;
-							int rect_height = frame_count * delta_pos;
+					if(notes[object_ind].objects[i] == 1) {
+						note_rect[i][head[i]].h = default_height;
+						note_rect[i][head[i]].y = -default_height;
 
-							note_rect[i][head[i]].h = rect_height;
-							note_rect[i][head[i]].y = -rect_height;
-
-							if(load_rect(note_tex[i],
-								     note_rect[head[i]],
-								     -1,
-								     note_rect[i][head[i]].h,
-								     (i + 1) * 100,
-								     0)) {
-								SDL_err();
-								return;
-							}
+						if(load_rect(note_tex[i],
+							     note_rect[head[i]],
+							     -1,
+							     note_rect[i][head[i]].h,
+							     (i + 1) * 100,
+							     0)) {
+							SDL_err();
+							return;
 						}
+
+						++head[i];
+					} else if(notes[object_ind].objects[i] == 2) {
+						int time_diff =	notes[object_ind].times.end - notes[object_ind].times.start;
+						int frame_count = time_diff / ms_per_frame;
+						int rect_height = frame_count * delta_pos;
+
+						note_rect[i][head[i]].h = rect_height;
+						note_rect[i][head[i]].y = -rect_height;
+
+						if(load_rect(note_tex[i],
+							     note_rect[head[i]],
+							     -1,
+							     note_rect[i][head[i]].h,
+							     (i + 1) * 100,
+							     0)) {
+							SDL_err();
+							return;
+						}
+
 						++head[i];
 					}
-						/* if(load_rect(note_tex[i], */
-						/* 	     note_rect[head[i]], */
-						/* 	     -1, */
-						/* 	     note_rect[i][head[i]].h, */
-						/* 	     (i + 1) * 100, */
-						/* 	     0)) { */
-						/* 	SDL_err(); */
-						/* 	return; */
-						/* } */
-
-
 				}
 
 				++object_ind;
