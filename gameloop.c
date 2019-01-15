@@ -19,43 +19,45 @@ void play_chart(win_ren *ren) {
 }
 
 
-struct note *parse_map(int keys, FILE *fp, int early, int frame_time) {
-	int object_count = 1000;
+struct note *parse_map(FILE *fp, struct map_timing *mp) {
+	int object_count = 100;
 
 	struct note *out = calloc(object_count, sizeof(*out));
 
-	out[0].times.start = 100;
-	out[0].times.end = 0;
-	out[0].objects = calloc(keys, sizeof(*out->objects));
-	out[0].objects[0] = 1;
+	set_note(out, 100, 0, 1);
+	set_note(out + 1, 200, 0, 6);
+	set_note(out + 2, 300, 800, 
 
 	out[1].times.start = 200;
 	out[1].times.end = 0;
-	out[1].objects = calloc(keys, sizeof(*out->objects));
+	out[1].objects = calloc(mp->keys, sizeof(*out->objects));
 	out[1].objects[1] = 1;
 	out[1].objects[2] = 1;
 
 	out[2].times.start = 300;
-	out[2].times.end = 400;
-	out[2].objects = calloc(keys, sizeof(*out->objects));
+	out[2].times.end = 800;
+	out[2].objects = calloc(mp->keys, sizeof(*out->objects));
 	out[2].objects[0] = 2;
 
 
-	for(int i = 3, prev = 2000; i < object_count; ++i) {
-		out[i].objects = calloc(keys, sizeof(*out->objects));
-		out[i].objects[0] = 1;
+	for(int i = 3, prev = 2000; i < (object_count - 1); ++i) {
+		out[i].objects = calloc(mp->keys, sizeof(*out->objects));
+		out[i].objects[0] = i % mp->keys;
 
 		out[i].times.start = prev;
 		prev += 50;
 	}
 
+	out[object_count - 1].objects = NULL;
 	return out;
 }
 
 
 void gameloop(win_ren *win, int argc, char **argv) {
+	struct map_timing mp;
+
         int quit = 0;
-	int keys = argc;
+	mp.keys = argc;
 
 	//scroll speed
 	//units of (pixel / s)
@@ -63,11 +65,11 @@ void gameloop(win_ren *win, int argc, char **argv) {
 
 	//time per frame
 	//ms/frame
-	int ms_per_frame = 1000 / win->fr;
+	mp.ms_per_frame = 1000 / win->fr;
 
 	//the number of pixels to move down per frame (each frame in time)
 	//(pixel / s) / (frame / s)
-	int delta_pos = speed / win->fr;
+	mp.delta_pos = speed / win->fr;
 
 	//ms to offset when the note should be
 	//drawn w.r.t. when it should be hit
@@ -76,75 +78,52 @@ void gameloop(win_ren *win, int argc, char **argv) {
 
 	//hit_line is a temporary global for now
 	//the y coordinate of bottom of lane
-	int draw_early = (hit_line * 1000) / speed;
+	mp.draw_early = (hit_line * 1000) / speed;
 
 	SDL_Event event;
 
-	SDL_Texture **note_tex = malloc(keys * sizeof(*note_tex));
-	SDL_Texture **hold_tex = malloc(keys * sizeof(*hold_tex));
+	SDL_Texture **note_tex = malloc(mp.keys * sizeof(*note_tex));
 
-	SDL_Rect **note_rect = malloc(keys * sizeof(*note_rect));
-	SDL_Rect **hold_rect = malloc(keys * sizeof(*hold_rect));
+	SDL_Rect **note_rect = malloc(mp.keys * sizeof(*note_rect));
 
-	unsigned char *head = calloc(keys, sizeof(*head));
-	unsigned char *tail = calloc(keys, sizeof(*tail));
+	unsigned char *head = calloc(mp.keys, sizeof(*head));
+	unsigned char *tail = calloc(mp.keys, sizeof(*tail));
 
-	unsigned char *hold_head = calloc(keys, sizeof(*hold_head));
-	unsigned char *hold_tail = calloc(keys, sizeof(*hold_tail));
+	int *const scancode = kb_game[mp.keys - 4];
 
-	int *const scancode = kb_game[keys - 4];
-
-	for(int i = 0; i < keys; ++i) {
+	for(int i = 0; i < mp.keys; ++i) {
 		note_tex[i] = IMG_LoadTexture(win->r, "pink.jpg");
-		hold_tex[i] = IMG_LoadTexture(win->r, "pink.jpg");
-		if(!(note_tex[i]) || !(hold_tex[i])) {
+		if(!note_tex[i]) {
 			SDL_err();
 			return;
 		}
 
 		note_rect[i] = malloc(MAX_SIZE * sizeof(**note_rect));
-		hold_rect[i] = malloc(MAX_SIZE * sizeof(**hold_rect));
-		/*
-		for(int j = 0; j < MAX_SIZE; ++j) {
-			//change i to grab from skin instead
-			if(load_rect(note_tex[i], note_rect[i] + j, -1, -1, (i + 1) * 100, 0)) {
-				SDL_err();
-				return;
-			}
-
-			if(load_rect(hold_tex[i], hold_rect[i] + j, -1, -1, i, 0)) {
-				SDL_err();
-				return;
-			}
+		if(!note_rect[i]) {
+			printf("Malloc failed.\n");
+			return;
 		}
-		*/
 	}
 
 	FILE *fp;
-	struct note *notes = parse_map(keys, fp, draw_early, ms_per_frame);
-
+	struct note *notes = parse_map(fp, &mp);
 	if(SDL_RenderClear(win->r)) {
 		SDL_err();
 		goto return_;
 	}	
 
 
-	long lag = 0;
-	int hold_ind = 0;
 	int object_ind = 0;
+	int default_height = 0;
+	SDL_QueryTexture(*note_tex, NULL, NULL, NULL, &default_height);
 
-	int default_height = note_rect[0][0].h;
-
-	unsigned int prev = SDL_GetTicks();
-	unsigned int start = prev;
-
-	while(!quit) {
+	for(unsigned int prev = SDL_GetTicks(), start = prev; !quit; ) {
 		while(SDL_PollEvent(&event)) {
 			if(event.type == SDL_KEYDOWN) {
 				if(event.key.keysym.scancode == SDL_SCANCODE_Q)
 					goto return_;
 				
-				for(int i = 0; i < keys; ++i) {
+				for(int i = 0; i < mp.keys; ++i) {
 					if(event.key.keysym.scancode == scancode[i]) {
 						head[i]++;
 						break;
@@ -153,72 +132,28 @@ void gameloop(win_ren *win, int argc, char **argv) {
 			}
 		}
 		
-		for(unsigned int curr; (curr = SDL_GetTicks()) > prev; prev += ms_per_frame) {
+		for(unsigned int curr;
+		    ((curr = SDL_GetTicks()) > prev) && (notes[object_ind].objects);
+		    prev += mp.ms_per_frame) {
+
 			unsigned int offset = curr - start;
-			int diff = offset - notes[object_ind].times.start;
-
-			if(diff < 0)
-				diff *= -1;
-
-			if(diff < ms_per_frame) {
-				for(int i = 0; i < keys; ++i) {
-					if(notes[object_ind].objects[i] == 1) {
-						note_rect[i][head[i]].h = default_height;
-						note_rect[i][head[i]].y = -default_height;
-
-						if(load_rect(note_tex[i],
-							     note_rect[head[i]],
-							     -1,
-							     note_rect[i][head[i]].h,
-							     (i + 1) * 100,
-							     0)) {
-							SDL_err();
-							return;
-						}
-
-						++head[i];
-					} else if(notes[object_ind].objects[i] == 2) {
-						int time_diff =	notes[object_ind].times.end - notes[object_ind].times.start;
-						int frame_count = time_diff / ms_per_frame;
-						int rect_height = frame_count * delta_pos;
-
-						note_rect[i][head[i]].h = rect_height;
-						note_rect[i][head[i]].y = -rect_height;
-
-						if(load_rect(note_tex[i],
-							     note_rect[head[i]],
-							     -1,
-							     note_rect[i][head[i]].h,
-							     (i + 1) * 100,
-							     0)) {
-							SDL_err();
-							return;
-						}
-
-						++head[i];
-					}
-				}
+			int diff = notes[object_ind].times.start - offset;
+			if(diff <= mp.ms_per_frame * 10) {
+				set_rect(note_rect, notes, &mp, head, object_ind, diff);
+>>>>>>> f69a93c0789ab8c2eaec1f349c5f052b95d10bc2
 
 				++object_ind;
 			}
 
-			if(update_note(win, keys, MAX_SIZE, note_rect, delta_pos, head, tail))
-				goto return_;
+			update_note(note_rect, &mp, head, tail);
 		}
 
-		for(int i = 0; i < keys; ++i) {
+		for(int i = 0; i < mp.keys; ++i) {
 			for(unsigned char j = tail[i]; j != head[i]; ++j) {
 				if(SDL_RenderCopy(win->r, note_tex[i], NULL, note_rect[i] + j)) {
 					SDL_err();
 					goto return_;
 				}
-
-				/*
-				if(SDL_RenderCopy(win->r, *(hold_tex + i), NULL, &hold_rect[i][j])) {
-					SDL_err();
-					goto return_;
-				}
-				*/
 			}
 		}
 
@@ -235,50 +170,88 @@ void gameloop(win_ren *win, int argc, char **argv) {
 	free(tail);
 
 	//free the note struct
+	free_notes(notes);
 
-	for(int i = 0; i < keys; ++i)
+	for(int i = 0; i < mp.keys; ++i)
 		SDL_DestroyTexture(*(note_tex + i));
 
 	free(note_tex);
 
-	for(int i = 0; i < keys; ++i)
+	for(int i = 0; i < mp.keys; ++i)
 		free(*(note_rect + i));
 
 	free(note_rect);
 }
 
 
-int update_note(win_ren *win, int key_count, int note_count, SDL_Rect **note, int increment, unsigned char *head, unsigned char *tail) {
-	for(int i = 0; i < key_count; ++i) {
+void update_note(SDL_Rect **note, struct map_timing *mp, unsigned char *head, unsigned char *tail) {
+	for(int i = 0; i < mp->keys; ++i) {
+		//printf("i: %d\n", i);
 		for(unsigned char j = tail[i]; j != head[i]; ++j) {
-			note[i][j].y += increment;
+			//printf("y, j: %d, %d\n", note[i][j].y, j);
+			note[i][j].y += mp->delta_pos;
 
-			if(note[i][j].y > hit_line) {
-				tail[i]++;
-				note[i][j].y = 0;
+			if(note[i][j].y > (hit_line + note[i][j].h)) {
+				/*
+				printf("y: %d\n", note[i][j].y);
+				printf("h: %d\n", note[i][j].h);
+				printf("j: %d\n\n", j);
+				*/
+				++tail[i];
 			}
 		}
 	}
-
-	return 0;
+	//puts("\n");
 }
 
 
-int load_rect(SDL_Texture *tex, SDL_Rect *rect, int width, int height, int x, int y) {
-	if(SDL_QueryTexture(tex, NULL, NULL, &rect->w, &rect->h)) {
-		SDL_err();
-		return 1;
-	}
-
-	if(height > 0)
-		rect->h = height;
-
-	if(width > 0)
-		rect->w = width;
-
+void load_rect(SDL_Rect *rect, int width, int height, int x, int y) {
+	rect->w = width;
+	rect->h = height;
 
 	rect->x = x;
 	rect->y = y;
+}
 
-	return 0;
+
+void set_rect(SDL_Rect **rect, struct note *notes, struct map_timing *mp, unsigned char *head, int index, int diff) {
+	for(int i = 0; i < mp->keys; ++i) {
+		if(notes[index].objects[i]) {
+			int set_height = mp->delta_pos;
+
+			if(notes[index].objects[i] == 2) {
+				int time_diff =	notes[index].times.end - notes[index].times.start;
+				int frame_count = time_diff / mp->ms_per_frame;
+				int rect_height = frame_count * mp->delta_pos;
+				set_height = rect_height;
+			}
+
+			int frames_early = diff / mp->ms_per_frame;
+			int offset = frames_early * mp->delta_pos;
+
+			rect[i][head[i]].h = set_height;
+			load_rect(rect[i], 100, rect[i][head[i]].h, (i + 1) * 100, -set_height - offset);
+
+			++head[i];
+		}
+	}
+}
+
+
+void free_notes(struct note *notes) {
+	for(int i = 0; notes[i].objects; ++i)
+		free(notes[i].objects);
+
+	free(notes);
+}
+
+
+void set_note(struct note *notes, int start, int end, int key_count, unsigned char notes) {
+	notes->times.start = start;
+	notes->times.end = end;
+
+	notes->objects = calloc(key_count, sizeof(*notes->objects));
+	for(int i = 0; i < key_count; ++i, notes >>= 1) {
+		notes->objects[i] = notes | 1;
+	}
 }
