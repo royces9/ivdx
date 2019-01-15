@@ -24,30 +24,17 @@ struct note *parse_map(FILE *fp, struct map_timing *mp) {
 
 	struct note *out = calloc(object_count, sizeof(*out));
 
-	set_note(out, 100, 0, 1);
-	set_note(out + 1, 200, 0, 6);
-	set_note(out + 2, 300, 800, 
+	set_note(out, (struct note_time){100, 0}, mp->keys, 1, 1);
+	set_note(out + 1, (struct note_time){200, 0}, mp->keys, 6, 1);
+	set_note(out + 2, (struct note_time){300, 800}, mp->keys, 1, 2); 
 
-	out[1].times.start = 200;
-	out[1].times.end = 0;
-	out[1].objects = calloc(mp->keys, sizeof(*out->objects));
-	out[1].objects[1] = 1;
-	out[1].objects[2] = 1;
-
-	out[2].times.start = 300;
-	out[2].times.end = 800;
-	out[2].objects = calloc(mp->keys, sizeof(*out->objects));
-	out[2].objects[0] = 2;
-
-
+	/*
 	for(int i = 3, prev = 2000; i < (object_count - 1); ++i) {
-		out[i].objects = calloc(mp->keys, sizeof(*out->objects));
-		out[i].objects[0] = i % mp->keys;
-
-		out[i].times.start = prev;
+		unsigned char key = 1 << (i % mp->keys);
+		set_note(out + i, prev, 0, mp->keys, key, 1);
 		prev += 50;
 	}
-
+	*/
 	out[object_count - 1].objects = NULL;
 	return out;
 }
@@ -140,8 +127,6 @@ void gameloop(win_ren *win, int argc, char **argv) {
 			int diff = notes[object_ind].times.start - offset;
 			if(diff <= mp.ms_per_frame * 10) {
 				set_rect(note_rect, notes, &mp, head, object_ind, diff);
->>>>>>> f69a93c0789ab8c2eaec1f349c5f052b95d10bc2
-
 				++object_ind;
 			}
 
@@ -246,12 +231,13 @@ void free_notes(struct note *notes) {
 }
 
 
-void set_note(struct note *notes, int start, int end, int key_count, unsigned char notes) {
-	notes->times.start = start;
-	notes->times.end = end;
+void set_note(struct note *notes, struct note_time time, int key_count, unsigned char key, int type) {
+	notes->times = time;
 
 	notes->objects = calloc(key_count, sizeof(*notes->objects));
-	for(int i = 0; i < key_count; ++i, notes >>= 1) {
-		notes->objects[i] = notes | 1;
+
+	for(int i = 0; i < key_count; ++i, key >>= 1) {
+		if(key | (unsigned char) 1) 
+			notes->objects[i] = type;
 	}
 }

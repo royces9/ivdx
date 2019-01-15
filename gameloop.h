@@ -34,7 +34,7 @@ void update_note(SDL_Rect **note, struct map_timing *mp, unsigned char *head, un
 void load_rect(SDL_Rect *rect, int width, int height, int x, int y);
 void set_rect(SDL_Rect **rect, struct note *notes, struct map_timing *mp, unsigned char *head, int index, int diff);
 void free_notes(struct note *notes);
-void set_note(struct note *notes, int start, int end, int key_count, unsigned char notes);
+void set_note(struct note *notes, struct note_time note, int key_count, unsigned char key, int type);
 
 #endif //GAMELOOP
 
