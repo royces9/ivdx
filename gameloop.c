@@ -48,15 +48,15 @@ void gameloop(win_ren *win, int argc, char **argv) {
 
 	//scroll speed
 	//units of (pixel / s)
-	int speed = 1000;
+	int speed = 100;
 
 	//time per frame
 	//ms/frame
-	mp.ms_per_frame = 1000 / win->fr;
+	mp.ms_per_frame = (pixel_t) 1000 / win->fr;
 
 	//the number of pixels to move down per frame (each frame in time)
 	//(pixel / s) / (frame / s)
-	mp.delta_pos = speed / win->fr;
+	mp.delta_pos = (pixel_t) speed / win->fr;
 
 	//ms to offset when the note should be
 	//drawn w.r.t. when it should be hit
@@ -65,7 +65,7 @@ void gameloop(win_ren *win, int argc, char **argv) {
 
 	//hit_line is a temporary global for now
 	//the y coordinate of bottom of lane
-	mp.draw_early = (hit_line * 1000) / speed;
+	mp.draw_early = (pixel_t) (hit_line * 1000) / speed;
 
 	SDL_Event event;
 
@@ -101,10 +101,11 @@ void gameloop(win_ren *win, int argc, char **argv) {
 
 
 	int object_ind = 0;
-	int default_height = 0;
-	SDL_QueryTexture(*note_tex, NULL, NULL, NULL, &default_height);
+	SDL_QueryTexture(*note_tex, NULL, NULL, NULL, &mp.default_height);
+	mp.default_height = 10;
 
-	for(unsigned int prev = SDL_GetTicks(), start = prev; !quit; ) {
+	int debug = 0;
+	for(pixel_t prev = SDL_GetTicks(), start = prev; !quit; ) {
 		while(SDL_PollEvent(&event)) {
 			if(event.type == SDL_KEYDOWN) {
 				if(event.key.keysym.scancode == SDL_SCANCODE_Q)
@@ -118,23 +119,29 @@ void gameloop(win_ren *win, int argc, char **argv) {
 				}
 			}
 		}
-		
-		for(unsigned int curr;
-		    ((curr = SDL_GetTicks()) > prev) && (notes[object_ind].objects);
+
+		for(pixel_t curr;
+		    ((curr = SDL_GetTicks()) > prev);
 		    prev += mp.ms_per_frame) {
 
-			unsigned int offset = curr - start;
-			int diff = notes[object_ind].times.start - offset;
-			if(diff <= mp.ms_per_frame * 10) {
+			pixel_t offset = curr - start;
+			pixel_t diff = notes[object_ind].times.start - offset;
+
+			if((diff < mp.ms_per_frame) && notes[object_ind].objects) {
 				set_rect(note_rect, notes, &mp, head, object_ind, diff);
 				++object_ind;
 			}
 
-			update_note(note_rect, &mp, head, tail);
+			pixel_t fraction = diff / mp.ms_per_frame;
+			printf("fraction: %lf\n", fraction);
+			update_note(note_rect, &mp, head, tail, fraction);
 		}
+		
 
 		for(int i = 0; i < mp.keys; ++i) {
+
 			for(unsigned char j = tail[i]; j != head[i]; ++j) {
+
 				if(SDL_RenderCopy(win->r, note_tex[i], NULL, note_rect[i] + j)) {
 					SDL_err();
 					goto return_;
@@ -149,7 +156,6 @@ void gameloop(win_ren *win, int argc, char **argv) {
 			goto return_;
 		}
 	}
-
  return_:
 	free(head);
 	free(tail);
@@ -169,24 +175,18 @@ void gameloop(win_ren *win, int argc, char **argv) {
 }
 
 
-void update_note(SDL_Rect **note, struct map_timing *mp, unsigned char *head, unsigned char *tail) {
+void update_note(SDL_Rect **note, struct map_timing *mp, unsigned char *head, unsigned char *tail, pixel_t fraction) {
 	for(int i = 0; i < mp->keys; ++i) {
-		//printf("i: %d\n", i);
+
 		for(unsigned char j = tail[i]; j != head[i]; ++j) {
-			//printf("y, j: %d, %d\n", note[i][j].y, j);
-			note[i][j].y += mp->delta_pos;
+			note[i][j].y += mp->delta_pos * fraction;
 
 			if(note[i][j].y > (hit_line + note[i][j].h)) {
-				/*
-				printf("y: %d\n", note[i][j].y);
-				printf("h: %d\n", note[i][j].h);
-				printf("j: %d\n\n", j);
-				*/
+				//printf("%d %d\n", note[i][j].y, note[i][j].h);
 				++tail[i];
 			}
 		}
 	}
-	//puts("\n");
 }
 
 
@@ -202,7 +202,7 @@ void load_rect(SDL_Rect *rect, int width, int height, int x, int y) {
 void set_rect(SDL_Rect **rect, struct note *notes, struct map_timing *mp, unsigned char *head, int index, int diff) {
 	for(int i = 0; i < mp->keys; ++i) {
 		if(notes[index].objects[i]) {
-			int set_height = mp->delta_pos;
+			int set_height = mp->default_height;
 
 			if(notes[index].objects[i] == 2) {
 				int time_diff =	notes[index].times.end - notes[index].times.start;
@@ -237,7 +237,7 @@ void set_note(struct note *notes, struct note_time time, int key_count, unsigned
 	notes->objects = calloc(key_count, sizeof(*notes->objects));
 
 	for(int i = 0; i < key_count; ++i, key >>= 1) {
-		if(key | (unsigned char) 1) 
+		if(key & 0x01) 
 			notes->objects[i] = type;
 	}
 }

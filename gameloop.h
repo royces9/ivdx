@@ -1,6 +1,8 @@
 #ifndef GAMELOOP
 #define GAMELOOP
 
+typedef double pixel_t;
+
 struct note_time {
 	int start;
 	int end;
@@ -15,14 +17,17 @@ struct note {
 
 struct map_timing {
 	//ms per frame to draw
-	int ms_per_frame;
+	pixel_t ms_per_frame;
 
 	//pixels to move per frame
-	int delta_pos;
+	pixel_t delta_pos;
 
 	//how many ms to draw early
-	int draw_early;
+	pixel_t draw_early;
 
+	//height of the sprites
+	int default_height;
+	
 	//number of keys
 	int keys;
 };
@@ -30,7 +35,7 @@ struct map_timing {
 void play_chart(win_ren *ren);
 struct note *parse_map(FILE *fp, struct map_timing *mp);
 void gameloop(win_ren *win, int argc, char **argv);
-void update_note(SDL_Rect **note, struct map_timing *mp, unsigned char *head, unsigned char *tail);
+void update_note(SDL_Rect **note, struct map_timing *mp, unsigned char *head, unsigned char *tail, pixel_t fraction);
 void load_rect(SDL_Rect *rect, int width, int height, int x, int y);
 void set_rect(SDL_Rect **rect, struct note *notes, struct map_timing *mp, unsigned char *head, int index, int diff);
 void free_notes(struct note *notes);
