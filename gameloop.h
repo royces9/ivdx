@@ -2,7 +2,7 @@
 #define GAMELOOP
 
 typedef double pixel_t;
-
+typedef unsigned char key_flag
 struct note_time {
 	int start;
 	int end;
@@ -14,6 +14,11 @@ struct note {
 	char *objects;
 };
 
+
+struct note_list {
+	struct note *note;
+	struct note_list *next;
+}
 
 struct map_timing {
 	//ms per frame to draw
@@ -39,7 +44,7 @@ void update_note(SDL_Rect **note, struct map_timing *mp, unsigned char *head, un
 void load_rect(SDL_Rect *rect, int width, int height, int x, int y);
 void set_rect(SDL_Rect **rect, struct note *notes, struct map_timing *mp, unsigned char *head, int index, int diff);
 void free_notes(struct note *notes);
-void set_note(struct note *notes, struct note_time note, int key_count, unsigned char key, int type);
+void set_note(struct note *notes, struct note_time note, int key_count, key_flag key, int type);
 
 #endif //GAMELOOP
 

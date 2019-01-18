@@ -11,6 +11,7 @@ extern int *kb_game[];
 
 //#define MAX_SIZE 64
 #define MAX_SIZE 256
+#define BUFF_SIZE 512
 
 int hit_line = 1080;
 
@@ -20,7 +21,23 @@ void play_chart(win_ren *ren) {
 
 
 struct note *parse_map(FILE *fp, struct map_timing *mp) {
-	int object_count = 100;
+
+	char buffer[BUFF_SIZE];
+
+	while(fgets(buffer, BUFF_SIZE, fp)) {
+		if(!strncmp(buffer, "[Notes]", 7)) {
+			break;
+		}
+	}
+
+	memset(buffer, 0, BUFF_SIZE);
+
+	int object_count = 0;
+
+	while(fgets(buffer, BUFF_SIZE, fp)) {
+		struct note *note = get_note(buffer);
+	}
+
 
 	struct note *out = calloc(object_count, sizeof(*out));
 
@@ -231,7 +248,7 @@ void free_notes(struct note *notes) {
 }
 
 
-void set_note(struct note *notes, struct note_time time, int key_count, unsigned char key, int type) {
+void set_note(struct note *notes, struct note_time time, int key_count, key_flag key, int type) {
 	notes->times = time;
 
 	notes->objects = calloc(key_count, sizeof(*notes->objects));
