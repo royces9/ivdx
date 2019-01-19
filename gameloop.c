@@ -9,7 +9,6 @@
 
 extern int *kb_game[];
 
-//#define MAX_SIZE 64
 #define MAX_SIZE 256
 #define BUFF_SIZE 512
 
@@ -20,25 +19,47 @@ void play_chart(win_ren *ren) {
 }
 
 
-struct note *parse_map(FILE *fp, struct map_timing *mp) {
+int copy_delimit(char *src, char *dest, char delimit) {
+	int i = 0;
+	while(*src != delimit) {
+		dest = src;
+		++src;
+		++i;
+	}
 
+	return i;
+}
+
+struct note *get_note(char *string, struct map_timing *mp) {
+	struct note *out = malloc(sizeof(*out));
+	out->objects = malloc(mp->keys * sizeof(*out->objects));
 	char buffer[BUFF_SIZE];
 
-	while(fgets(buffer, BUFF_SIZE, fp)) {
-		if(!strncmp(buffer, "[Notes]", 7)) {
-			break;
-		}
-	}
+	int offset = copy_delimit(string, buffer, ',');
+	string += (offset + 1);
 
-	memset(buffer, 0, BUFF_SIZE);
+	
+}
 
-	int object_count = 0;
+struct note *parse_map(FILE *fp, struct map_timing *mp) {
 
-	while(fgets(buffer, BUFF_SIZE, fp)) {
-		struct note *note = get_note(buffer);
-	}
+	/* char buffer[BUFF_SIZE]; */
 
+	/* while(fgets(buffer, BUFF_SIZE, fp)) { */
+	/* 	if(!strncmp(buffer, "[Notes]", 7)) { */
+	/* 		break; */
+	/* 	} */
+	/* } */
 
+	/* memset(buffer, 0, BUFF_SIZE); */
+
+	/* int object_count = 0; */
+
+	/* while(fgets(buffer, BUFF_SIZE, fp)) { */
+	/* 	struct note *note = get_note(buffer, mp); */
+	/* } */
+
+	int object_count = 100;
 	struct note *out = calloc(object_count, sizeof(*out));
 
 	set_note(out, (struct note_time){100, 0}, mp->keys, 1, 1);

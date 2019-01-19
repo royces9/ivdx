@@ -2,13 +2,14 @@
 #define GAMELOOP
 
 typedef double pixel_t;
-typedef unsigned char key_flag
+typedef unsigned char key_flag;
+
 struct note_time {
 	int start;
 	int end;
 };
 
-
+z
 struct note {
 	struct note_time times;
 	char *objects;
@@ -18,7 +19,7 @@ struct note {
 struct note_list {
 	struct note *note;
 	struct note_list *next;
-}
+};
 
 struct map_timing {
 	//ms per frame to draw
