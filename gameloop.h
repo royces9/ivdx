@@ -9,7 +9,7 @@ struct note_time {
 	int end;
 };
 
-z
+
 struct note {
 	struct note_time times;
 	char *objects;

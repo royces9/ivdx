@@ -173,7 +173,7 @@ void gameloop(win_ren *win, int argc, char **argv) {
 			}
 
 			fraction = curr / prev;
-			fraction = 1;
+			//fraction = 1;
 			update_note(note_rect, &mp, head, tail, fraction);
 		}
 
