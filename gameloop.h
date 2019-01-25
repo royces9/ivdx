@@ -6,7 +6,7 @@ typedef unsigned char key_flag;
 
 struct note_time {
 	int start;
-	int end;
+	int delta;
 };
 
 
@@ -20,6 +20,7 @@ struct note_list {
 	struct note *note;
 	struct note_list *next;
 };
+
 
 struct map_timing {
 	//ms per frame to draw
@@ -37,6 +38,7 @@ struct map_timing {
 	//number of keys
 	int keys;
 };
+
 
 void play_chart(win_ren *ren);
 struct note *parse_map(FILE *fp, struct map_timing *mp);

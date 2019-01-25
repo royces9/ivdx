@@ -64,10 +64,12 @@ struct note *parse_map(FILE *fp, struct map_timing *mp) {
 
 	set_note(out, (struct note_time){100, 0}, mp->keys, 1, 1);
 	set_note(out + 1, (struct note_time){200, 0}, mp->keys, 6, 1);
-	set_note(out + 2, (struct note_time){300, 800}, mp->keys, 1, 2); 
-	set_note(out + 3, (struct note_time){400, 0}, mp->keys, 6, 1);
+	set_note(out + 2, (struct note_time){300, 500}, mp->keys, 1, 2); 
+	set_note(out + 3, (struct note_time){300, 0}, mp->keys, 6, 1);
+	set_note(out + 4, (struct note_time){400, 0}, mp->keys, 8, 1);
+	set_note(out + 5, (struct note_time){800, 0}, mp->keys, 12, 1);
 
-	for(int i = 4, prev = 2000; i < (object_count - 1); ++i) {
+	for(int i = 6, prev = 2000; i < (object_count - 1); ++i) {
 		unsigned char key = 1 << (i % mp->keys);
 		struct note_time temp = {prev, prev + 50};
 
@@ -173,7 +175,6 @@ void gameloop(win_ren *win, int argc, char **argv) {
 			}
 
 			fraction = curr / prev;
-			//fraction = 1;
 			update_note(note_rect, &mp, head, tail, fraction);
 		}
 
@@ -214,6 +215,7 @@ void gameloop(win_ren *win, int argc, char **argv) {
 
 
 void update_note(SDL_Rect **note, struct map_timing *mp, unsigned char *head, unsigned char *tail, pixel_t fraction) {
+
 	for(int i = 0; i < mp->keys; ++i) {
 
 		for(unsigned char j = tail[i]; j != head[i]; ++j) {
@@ -236,24 +238,22 @@ void load_rect(SDL_Rect *rect, int width, int height, int x, int y) {
 
 
 void set_rect(SDL_Rect **rect, struct note *notes, struct map_timing *mp, unsigned char *head, int index, int diff) {
+	pixel_t frames_early = diff / mp->ms_per_frame;
+
 	for(int i = 0; i < mp->keys; ++i) {
 		if(notes[index].objects[i]) {
-
-			int set_height = mp->default_height;
+			pixel_t set_height = mp->default_height;
 
 			if(notes[index].objects[i] == 2) {
-				int time_diff =	notes[index].times.end - notes[index].times.start;
-				int frame_count = time_diff / mp->ms_per_frame;
+				pixel_t frame_count = notes[index].times.delta / mp->ms_per_frame;
 				set_height = frame_count * mp->delta_pos;
 			}
 
-			int frames_early = diff / mp->ms_per_frame;
-			int offset = frames_early * mp->delta_pos;
+			pixel_t offset = frames_early * mp->delta_pos;
 
-			rect[i][head[i]].h = set_height;
 			load_rect(rect[i] + head[i],
-				  100, rect[i][head[i]].h,
-				  (i + 1) * 100, -set_height - offset);
+				  100, set_height,
+				  (i + 1) * 100, -(set_height + offset));
 
 			++head[i];
 		}

@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -g -MMD  `sdl2-config --cflags`
+CFLAGS = -g -MMD  `sdl2-config --cflags` -O3
 LDFLAGS = `sdl2-config --libs` -lSDL2_mixer -lSDL2_image
 
 CFILES = $(wildcard *.c)
