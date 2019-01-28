@@ -149,7 +149,7 @@ void gameloop(win_ren *win, int argc, char **argv) {
 				pixel_t diff = notes[object_ind].times.start - offset;
 
 				if(abs(diff) < mp.ms_per_frame) {
-					set_rect(note_rect, notes, &mp, head, object_ind, diff);
+					set_rect(note_rect, notes + object_ind, &mp, head, diff);
 					++object_ind;
 				}
 			}
@@ -216,19 +216,18 @@ void load_rect(SDL_Rect *rect, int width, int height, int x, int y) {
 }
 
 
-void set_rect(SDL_Rect **rect, struct note *notes, struct map_timing *mp, unsigned char *head, int index, int diff) {
+void set_rect(SDL_Rect **rect, struct note *notes, struct map_timing *mp, unsigned char *head, int diff) {
 	pixel_t frames_early = diff / mp->ms_per_frame;
+	pixel_t offset = frames_early * mp->delta_pos;
 
 	for(int i = 0; i < mp->keys; ++i) {
-		if(notes[index].objects[i]) {
+		if(notes->objects[i]) {
 			pixel_t set_height = mp->default_height;
 
-			if(notes[index].objects[i] == 2) {
-				pixel_t frame_count = notes[index].times.delta / mp->ms_per_frame;
+			if(notes->objects[i] == 2) {
+				pixel_t frame_count = notes->times.delta / mp->ms_per_frame;
 				set_height = frame_count * mp->delta_pos;
 			}
-
-			pixel_t offset = frames_early * mp->delta_pos;
 
 			load_rect(rect[i] + head[i],
 				  100, set_height,
