@@ -48,6 +48,7 @@ void load_rect(SDL_Rect *rect, int width, int height, int x, int y);
 void set_rect(SDL_Rect **rect, struct note *notes, struct map_timing *mp, unsigned char *head, int index, int diff);
 void free_notes(struct note *notes);
 void set_note(struct note *notes, struct note_time note, int key_count, key_flag key, int type);
+void set_mp(struct map_timing *mp, int fps, int speed, int keys);
 
 #endif //GAMELOOP
 

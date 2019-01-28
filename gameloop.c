@@ -37,9 +37,8 @@ struct note *get_note(char *string, struct map_timing *mp) {
 
 	int offset = copy_delimit(string, buffer, ',');
 	string += (offset + 1);
-
-	
 }
+
 
 struct note *parse_map(FILE *fp, struct map_timing *mp) {
 
@@ -71,7 +70,7 @@ struct note *parse_map(FILE *fp, struct map_timing *mp) {
 
 	for(int i = 6, prev = 2000; i < (object_count - 1); ++i) {
 		unsigned char key = 1 << (i % mp->keys);
-		struct note_time temp = {prev, prev + 50};
+		struct note_time temp = {prev, 50};
 
 		set_note(out + i, temp, mp->keys, key, 2);
 		prev += 50;
@@ -86,28 +85,9 @@ void gameloop(win_ren *win, int argc, char **argv) {
 	struct map_timing mp;
 
         int quit = 0;
-	mp.keys = argc;
-
-	//scroll speed
-	//units of (pixel / s)
 	int speed = 1000;
 
-	//time per frame
-	//ms/frame
-	mp.ms_per_frame = (pixel_t) 1000 / win->fr;
-
-	//the number of pixels to move down per frame (each frame in time)
-	//(pixel / s) / (frame / s)
-	mp.delta_pos = (pixel_t) speed / win->fr;
-
-	//ms to offset when the note should be
-	//drawn w.r.t. when it should be hit
-	//i.e. if timing is at 25ms, it should be
-	//drawn earlier
-
-	//hit_line is a temporary global for now
-	//the y coordinate of bottom of lane
-	mp.draw_early = (pixel_t) (hit_line * 1000) / speed;
+	set_mp(&mp, win->fr, speed, argc);
 
 	SDL_Event event;
 
@@ -118,7 +98,7 @@ void gameloop(win_ren *win, int argc, char **argv) {
 	unsigned char *head = calloc(mp.keys, sizeof(*head));
 	unsigned char *tail = calloc(mp.keys, sizeof(*tail));
 
-	int *const scancode = kb_game[mp.keys - 4];
+	//int *const scancode = kb_game[mp.keys - 4];
 
 	for(int i = 0; i < mp.keys; ++i) {
 		note_tex[i] = IMG_LoadTexture(win->r, "pink.jpg");
@@ -174,7 +154,6 @@ void gameloop(win_ren *win, int argc, char **argv) {
 				}
 			}
 
-			fraction = curr / prev;
 			update_note(note_rect, &mp, head, tail, fraction);
 		}
 
@@ -278,4 +257,25 @@ void set_note(struct note *notes, struct note_time time, int key_count, key_flag
 		if(key & 0x01) 
 			notes->objects[i] = type;
 	}
+}
+
+
+void set_mp(struct map_timing *mp, int fps, int speed, int keys) {
+	//number of keys
+	mp->keys = keys;
+
+	//time per frame
+	// ms/frame
+	mp->ms_per_frame = (pixel_t) 1000 / fps;
+
+	//number of pixels to move down per frame
+	//(pixel / s) / (frame / s)
+	mp->delta_pos = (pixel_t) speed / fps;
+
+	//ms to offset when the note should be draw w.r.t. when it hsould be hit
+	//i.e. if timing is at 25ms, it should be
+	//drawn earlier
+
+	//hit line is a temp global
+	mp->draw_early = (pixel_t) (hit_line * 1000) / speed;
 }
