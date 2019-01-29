@@ -61,21 +61,24 @@ struct note *parse_map(FILE *fp, struct map_timing *mp) {
 	int object_count = 100;
 	struct note *out = calloc(object_count, sizeof(*out));
 
-	set_note(out, (struct note_time){100, 0}, mp->keys, 1, 1);
-	set_note(out + 1, (struct note_time){200, 0}, mp->keys, 6, 1);
-	set_note(out + 2, (struct note_time){300, 500}, mp->keys, 1, 2); 
-	set_note(out + 3, (struct note_time){300, 0}, mp->keys, 6, 1);
-	set_note(out + 4, (struct note_time){400, 0}, mp->keys, 8, 1);
-	set_note(out + 5, (struct note_time){800, 0}, mp->keys, 12, 1);
+	char *temp_note = malloc(mp->keys * sizeof(*temp_note));
 
-	for(int i = 6, prev = 2000; i < (object_count - 1); ++i) {
+	set_note(out, (struct note_time){100, 0}, mp->keys, temp_note);
+
+	set_note(out + 1, (struct note_time){200, 0}, mp->keys, temp_note);
+	set_note(out + 2, (struct note_time){300, 500}, mp->keys, temp_note); 
+	set_note(out + 3, (struct note_time){400, 0}, mp->keys, temp_note);
+	set_note(out + 4, (struct note_time){500, 0}, mp->keys, temp_note);
+
+	/*
+	for(int i = 5, prev = 2000; i < (object_count - 1); ++i) {
 		unsigned char key = 1 << (i % mp->keys);
 		struct note_time temp = {prev, 50};
 
 		set_note(out + i, temp, mp->keys, key, 2);
 		prev += 50;
 	}
-
+	*/
 	out[object_count - 1].objects = NULL;
 	return out;
 }
@@ -85,7 +88,9 @@ void gameloop(win_ren *win, int argc, char **argv) {
 	struct map_timing mp;
 
         int quit = 0;
-	int speed = 1000;
+
+	//pixel / s
+	int speed = 500;
 
 	set_mp(&mp, win->fr, speed, argc);
 
@@ -125,7 +130,6 @@ void gameloop(win_ren *win, int argc, char **argv) {
 
 	int object_ind = 0;
 	SDL_QueryTexture(*note_tex, NULL, NULL, NULL, &mp.default_height);
-	mp.default_height = 10;
 
 	int debug = 0;
 	for(pixel_t prev = SDL_GetTicks(), start = prev; !quit; ) {
@@ -153,12 +157,13 @@ void gameloop(win_ren *win, int argc, char **argv) {
 					++object_ind;
 				}
 			}
-
-			update_note(note_rect, &mp, head, tail, fraction);
+			update_note(note_rect, &mp, head, tail);
 		}
+
 
 		for(int i = 0; i < mp.keys; ++i) {
 			for(unsigned char j = tail[i]; j != head[i]; ++j) {
+				note_rect[i][j].y += mp.ms_per_frame * fraction;
 				if(SDL_RenderCopy(win->r, note_tex[i], NULL, note_rect[i] + j)) {
 					SDL_err();
 					goto return_;
@@ -171,7 +176,6 @@ void gameloop(win_ren *win, int argc, char **argv) {
 			SDL_err();
 			goto return_;
 		}
-
 	}
 
  return_:
@@ -193,12 +197,10 @@ void gameloop(win_ren *win, int argc, char **argv) {
 }
 
 
-void update_note(SDL_Rect **note, struct map_timing *mp, unsigned char *head, unsigned char *tail, pixel_t fraction) {
-
+void update_note(SDL_Rect **note, struct map_timing *mp, unsigned char *head, unsigned char *tail) {
 	for(int i = 0; i < mp->keys; ++i) {
-
 		for(unsigned char j = tail[i]; j != head[i]; ++j) {
-			note[i][j].y += mp->delta_pos * fraction;
+			note[i][j].y += mp->delta_pos;
 
 			if(note[i][j].y > (hit_line + note[i][j].h))
 				++tail[i];
@@ -221,13 +223,18 @@ void set_rect(SDL_Rect **rect, struct note *notes, struct map_timing *mp, unsign
 	pixel_t offset = frames_early * mp->delta_pos;
 
 	for(int i = 0; i < mp->keys; ++i) {
-		if(notes->objects[i]) {
+		if(notes->objects[i] == 1) {
 			pixel_t set_height = mp->default_height;
 
-			if(notes->objects[i] == 2) {
-				pixel_t frame_count = notes->times.delta / mp->ms_per_frame;
-				set_height = frame_count * mp->delta_pos;
-			}
+			load_rect(rect[i] + head[i],
+				  100, set_height,
+				  (i + 1) * 100, -(set_height + offset));
+
+			++head[i];
+
+		} else if(notes->objects[i] == 2) {
+			pixel_t frame_count = notes->times.delta / mp->ms_per_frame;
+			pixel_t set_height = frame_count * mp->delta_pos;
 
 			load_rect(rect[i] + head[i],
 				  100, set_height,
@@ -247,14 +254,13 @@ void free_notes(struct note *notes) {
 }
 
 
-void set_note(struct note *notes, struct note_time time, int key_count, key_flag key, int type) {
+void set_note(struct note *notes, struct note_time time, int key_count, char *type) {
 	notes->times = time;
 
-	notes->objects = calloc(key_count, sizeof(*notes->objects));
+	notes->objects = malloc(key_count * sizeof(*notes->objects));
 
-	for(int i = 0; i < key_count; ++i, key >>= 1) {
-		if(key & 0x01) 
-			notes->objects[i] = type;
+	for(int i = 0; i < key_count; ++i) {
+		notes->objects[i] = type[i];
 	}
 }
 
