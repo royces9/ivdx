@@ -60,14 +60,28 @@ struct note *parse_map(FILE *fp, struct map_timing *mp) {
 
 	int object_count = 100;
 	struct note *out = calloc(object_count, sizeof(*out));
+	void set_temp(char *temp, char a, char b, char c, char d) {
+		temp[0] = a;
+		temp[1] = b;
+		temp[2] = c;
+		temp[3] = d;
+	}
 
 	char *temp_note = malloc(mp->keys * sizeof(*temp_note));
 
+	set_temp(temp_note, 1, 0, 0, 0);
 	set_note(out, (struct note_time){100, 0}, mp->keys, temp_note);
 
+	set_temp(temp_note, 0, 1, 1, 0);
 	set_note(out + 1, (struct note_time){200, 0}, mp->keys, temp_note);
-	set_note(out + 2, (struct note_time){300, 500}, mp->keys, temp_note); 
+
+	set_temp(temp_note, 2, 0, 1, 0);
+	set_note(out + 2, (struct note_time){300, 200}, mp->keys, temp_note); 
+
+	set_temp(temp_note, 0, 1, 1, 0);
 	set_note(out + 3, (struct note_time){400, 0}, mp->keys, temp_note);
+
+	set_temp(temp_note, 0, 1, 0, 1);
 	set_note(out + 4, (struct note_time){500, 0}, mp->keys, temp_note);
 
 	/*
@@ -234,6 +248,9 @@ void set_rect(SDL_Rect **rect, struct note *notes, struct map_timing *mp, unsign
 
 		} else if(notes->objects[i] == 2) {
 			pixel_t frame_count = notes->times.delta / mp->ms_per_frame;
+			printf("delta = %lf\n", notes->times.delta);
+			printf("frametime = %lf\n", mp->ms_per_frame);
+			printf("count: %lf\n", frame_count);
 			pixel_t set_height = frame_count * mp->delta_pos;
 
 			load_rect(rect[i] + head[i],
