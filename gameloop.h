@@ -6,7 +6,7 @@ typedef unsigned char key_flag;
 
 struct note_time {
 	int start;
-	int delta;
+	int *delta;
 };
 
 
@@ -43,11 +43,14 @@ struct map_timing {
 void play_chart(win_ren *ren);
 struct note *parse_map(FILE *fp, struct map_timing *mp);
 void gameloop(win_ren *win, int argc, char **argv);
-void update_note(SDL_Rect **note, struct map_timing *mp, unsigned char *head, unsigned char *tail);
+
 void load_rect(SDL_Rect *rect, int width, int height, int x, int y);
 void set_rect(SDL_Rect **rect, struct note *notes, struct map_timing *mp, unsigned char *head, int diff);
+
+void update_note(SDL_Rect **note, struct map_timing *mp, unsigned char *head, unsigned char *tail);
 void free_notes(struct note *notes);
-void set_note(struct note *notes, struct note_time note, int key_count, char *type);
+void set_note(struct note *notes, int *values);
+
 void set_mp(struct map_timing *mp, int fps, int speed, int keys);
 
 #endif //GAMELOOP

@@ -30,56 +30,84 @@ int copy_delimit(char *src, char *dest, char delimit) {
 	return i;
 }
 
-struct note *get_note(char *string, struct map_timing *mp) {
+struct note *get_note(char *string, struct map_timing *mp, FILE *fp) {
 	struct note *out = malloc(sizeof(*out));
 	out->objects = malloc(mp->keys * sizeof(*out->objects));
-	char buffer[BUFF_SIZE];
+	out->times.delta = malloc(mp->keys * sizeof(*out->times.delta));
 
-	int offset = copy_delimit(string, buffer, ',');
-	string += (offset + 1);
+	char *cpy_string = string;
+	char **cp = &cpy_string;
+
+	int values[4];
+	for(int i = 0; i < 4; ++i) {
+		values[i] = strtol(*cp, cp, 10);
+		(*cp)++;
+	}
+
+
+
+	char buffer[BUFF_SIZE];
+	char *p_buff = buffer;
+	int prev_start = 0;
+	do {
+		prev_start = values[2];
+		set_note(out, values);
+
+		char *p_buff = buffer;
+		cp = &p_buff;
+
+		fgets(buffer, BUFF_SIZE, fp);
+
+		for(int i = 0; i < 4; ++i) {
+			values[i] = strtol(*cp, cp, 10);
+		}
+
+	} while(values[2] != prev_start);
+
+	strncpy(string, buffer, BUFF_SIZE);
+
+	return out;
 }
 
 
-struct note *parse_map(FILE *fp, struct map_timing *mp) {
+void print_note(struct note *note) {
+	printf("start: %d\n", note->times.start);
 
-	/* char buffer[BUFF_SIZE]; */
-
-	/* while(fgets(buffer, BUFF_SIZE, fp)) { */
-	/* 	if(!strncmp(buffer, "[Notes]", 7)) { */
-	/* 		break; */
-	/* 	} */
-	/* } */
-
-	/* memset(buffer, 0, BUFF_SIZE); */
-
-	/* int object_count = 0; */
-
-	/* while(fgets(buffer, BUFF_SIZE, fp)) { */
-	/* 	struct note *note = get_note(buffer, mp); */
-	/* } */
-
-	int object_count = 100;
-	struct note *out = calloc(object_count, sizeof(*out));
-
-	char *temp_note = malloc(mp->keys * sizeof(*temp_note));
-
-	set_note(out, (struct note_time){100, 0}, mp->keys, temp_note);
-
-	set_note(out + 1, (struct note_time){200, 0}, mp->keys, temp_note);
-	set_note(out + 2, (struct note_time){300, 500}, mp->keys, temp_note); 
-	set_note(out + 3, (struct note_time){400, 0}, mp->keys, temp_note);
-	set_note(out + 4, (struct note_time){500, 0}, mp->keys, temp_note);
-
-	/*
-	for(int i = 5, prev = 2000; i < (object_count - 1); ++i) {
-		unsigned char key = 1 << (i % mp->keys);
-		struct note_time temp = {prev, 50};
-
-		set_note(out + i, temp, mp->keys, key, 2);
-		prev += 50;
+	for(int i = 0; i < 4; ++i) {
+		printf("lane: %d\n", i);
+		printf("type: %d\n", note->objects[i]);
+		printf("delta: %d\n", note->times.delta[i]);
 	}
-	*/
-	out[object_count - 1].objects = NULL;
+	//getchar();
+}
+
+struct note *parse_map(FILE *fp, struct map_timing *mp) {
+	struct note *out = malloc(100 * sizeof(*out));
+
+	char buffer[BUFF_SIZE];
+
+	while(fgets(buffer, BUFF_SIZE, fp)) {
+		if(!strncmp(buffer, "[Notes]", 7)) {
+			break;
+		}
+	}
+
+	memset(buffer, 0, BUFF_SIZE);
+
+	int object_count = 0;
+
+	fgets(buffer, BUFF_SIZE, fp);
+	while(object_count < 98) {
+		struct note *note = get_note(buffer, mp, fp);
+		if(!note || !buffer)
+			return out;
+
+		print_note(note);
+
+		out[object_count++] = *note;
+		//free(note);
+	}
+
 	return out;
 }
 
@@ -119,7 +147,7 @@ void gameloop(win_ren *win, int argc, char **argv) {
 		}
 	}
 
-	FILE *fp;
+	FILE *fp = fopen("map.ivdx", "r");
 	struct note *notes = parse_map(fp, &mp);
 
 	if(SDL_RenderClear(win->r)) {
@@ -233,7 +261,7 @@ void set_rect(SDL_Rect **rect, struct note *notes, struct map_timing *mp, unsign
 			++head[i];
 
 		} else if(notes->objects[i] == 2) {
-			pixel_t frame_count = notes->times.delta / mp->ms_per_frame;
+			pixel_t frame_count = notes->times.delta[i] / mp->ms_per_frame;
 			pixel_t set_height = frame_count * mp->delta_pos;
 
 			load_rect(rect[i] + head[i],
@@ -254,14 +282,10 @@ void free_notes(struct note *notes) {
 }
 
 
-void set_note(struct note *notes, struct note_time time, int key_count, char *type) {
-	notes->times = time;
-
-	notes->objects = malloc(key_count * sizeof(*notes->objects));
-
-	for(int i = 0; i < key_count; ++i) {
-		notes->objects[i] = type[i];
-	}
+void set_note(struct note *notes, int *values) {
+	notes->times.start = values[2];
+	notes->objects[values[0]] = values[1];
+	notes->times.delta[values[0]] = values[3] ? values[3] - values[2] : 0;
 }
 
 
