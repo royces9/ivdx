@@ -94,6 +94,7 @@ struct note *parse_map(FILE *fp, struct map_timing *mp) {
 
 	memset(buffer, 0, BUFF_SIZE);
 
+
 	int object_count = 0;
 
 	fgets(buffer, BUFF_SIZE, fp);
